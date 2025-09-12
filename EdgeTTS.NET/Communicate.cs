@@ -5,8 +5,8 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Web;
-using EdgeTTS.NET.Models;
-using EdgeTTS.NET.Text;
+using Models;
+using Text;
 
 
 
@@ -72,15 +72,6 @@ public class Communicate
                 var (headers, data) = await ReceiveMessageAsync(webSocket, cancellationToken);
                 if (headers is null) break; // Connection closed or error
 
-                // Log all received headers for debugging
-                // Console.WriteLine("[WebSocket] Received message headers:");
-                // foreach(var header in headers)
-                // {
-                //     Console.WriteLine($"  {header.Key}: {header.Value}");
-                // }
-                // Console.WriteLine($"[WebSocket] Received message data length: {data.Length}");
-
-
                 if (headers.TryGetValue("Path", out var path))
                 {
                     if (path == "audio.metadata")
@@ -100,26 +91,23 @@ public class Communicate
                     }
                     else if (path == "audio") // Directly handle Path: audio
                     {
-                        // Python logic: "We only allow no Content-Type if there is no data."
                         // If Content-Type is present, it must be audio/mpeg.
                         // If Content-Type is missing AND data is empty, then continue (skip).
                         headers.TryGetValue("Content-Type", out var contentType);
 
-                        if (string.IsNullOrEmpty(contentType)) // Content-Type is None in Python
+                        if (string.IsNullOrEmpty(contentType)) // Content-Type is None
                         {
                             if (data.Length == 0)
                             {
-                                // This is the case where Python does 'continue'
-                                Console.WriteLine("[WebSocket] Received empty audio message with no Content-Type. Skipping.");
                                 continue; // Skip this message
                             }
                             // If Content-Type is None but data is NOT empty, this is an unexpected response.
-                            Console.WriteLine("[WebSocket] Warning: Received audio message with no Content-Type but with data. Treating as audio/mpeg.");
+                            // Console.WriteLine("[WebSocket] Warning: Received audio message with no Content-Type but with data. Treating as audio/mpeg.");
                             // Fall through to yield it as audio.
                         }
                         else if (!contentType.StartsWith("audio/mpeg", StringComparison.OrdinalIgnoreCase))
                         {
-                            Console.WriteLine($"[WebSocket] Warning: Received audio message with unexpected Content-Type: {contentType}. Skipping.");
+                            // Console.WriteLine($"[WebSocket] Warning: Received audio message with unexpected Content-Type: {contentType}. Skipping.");
                             continue; // Skip this message
                         }
 
@@ -135,14 +123,14 @@ public class Communicate
                     // In this case, we must rely on Content-Type.
                     if (headers.TryGetValue("Content-Type", out var contentType) && contentType.StartsWith("audio/mpeg", StringComparison.OrdinalIgnoreCase))
                     {
-                        Console.WriteLine($"[WebSocket] Matched Content-Type: {contentType}. Yielding audio chunk.");
+                        // Console.WriteLine($"[WebSocket] Matched Content-Type: {contentType}. Yielding audio chunk.");
                         audioWasReceivedInThisTurn = true;
                         yield return new AudioChunk(data);
                     }
-                    else
-                    {
-                        Console.WriteLine($"[WebSocket] Received message with unknown Path or Content-Type. Path: {headers.GetValueOrDefault("Path", "N/A")}, Content-Type: {headers.GetValueOrDefault("Content-Type", "N/A")}. Data length: {data.Length}");
-                    }
+                    //else
+                    //{
+                        //Console.WriteLine($"[WebSocket] Received message with unknown Path or Content-Type. Path: {headers.GetValueOrDefault("Path", "N/A")}, Content-Type: {headers.GetValueOrDefault("Content-Type", "N/A")}. Data length: {data.Length}");
+                    //}
                 }
             }
 
@@ -206,7 +194,7 @@ public class Communicate
         {
             if (messageBytes.Length < 2)
             {
-                Console.WriteLine("[WebSocket-Receive] Warning: Binary message too short to contain header length.");
+                //Console.WriteLine("[WebSocket-Receive] Warning: Binary message too short to contain header length.");
                 return (new Dictionary<string, string>(), Array.Empty<byte>());
             }
 
@@ -214,7 +202,7 @@ public class Communicate
 
             if (headerLength > messageBytes.Length - 2)
             {
-                Console.WriteLine($"[WebSocket-Receive] Warning: Header length ({headerLength}) is greater than remaining data length ({messageBytes.Length - 2}).");
+                //Console.WriteLine($"[WebSocket-Receive] Warning: Header length ({headerLength}) is greater than remaining data length ({messageBytes.Length - 2}).");
                 return (new Dictionary<string, string>(), Array.Empty<byte>());
             }
 
@@ -249,7 +237,7 @@ public class Communicate
             return (headers, bodyData);
         }
 
-        Console.WriteLine($"[WebSocket-Receive] Warning: Received unhandled message type: {result.MessageType}");
+        //Console.WriteLine($"[WebSocket-Receive] Warning: Received unhandled message type: {result.MessageType}");
         return (new Dictionary<string, string>(), Array.Empty<byte>());
     }
 
