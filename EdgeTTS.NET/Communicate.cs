@@ -4,7 +4,7 @@ using System.Net.WebSockets;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
-using System.Web;
+using System.Net;
 using Models;
 using Text;
 
@@ -16,14 +16,29 @@ public class Communicate
     private readonly IEnumerable<string> _textParts;
     private readonly string? _proxy;
 
-    public Communicate(string text, string? voice = null, string rate = "+0%", string volume = "+0%", string pitch = "+0Hz", string? proxy = null)
+    public Communicate(string text, string? voice = null, string rate = "+0%", string volume = "+0%", string pitch = "+0Hz", string boundaryType = "SentenceBoundary", string? proxy = null)
     {
-        _config = new TTSConfig(voice, rate, volume, pitch);
+        _config = new TTSConfig(voice, rate, volume, pitch, boundaryType);
         _proxy = proxy;
 
-        // Escape text and then split
-        var escapedText = HttpUtility.HtmlEncode(text);
+        // Clean text, escape, and then split
+        var cleanedText = RemoveIncompatibleCharacters(text);
+        var escapedText = WebUtility.HtmlEncode(cleanedText);
         _textParts = TextSplitter.SplitTextByByteLength(escapedText, 4096);
+    }
+
+    private static string RemoveIncompatibleCharacters(string text)
+    {
+        var chars = text.ToCharArray();
+        for (int i = 0; i < chars.Length; i++)
+        {
+            int code = chars[i];
+            if ((code >= 0 && code <= 8) || (code >= 11 && code <= 12) || (code >= 14 && code <= 31))
+            {
+                chars[i] = ' ';
+            }
+        }
+        return new string(chars);
     }
 
     
@@ -57,13 +72,17 @@ public class Communicate
             await webSocket.ConnectAsync(new Uri(wssUrl), cancellationToken);
 
             // Send speech config
-            var speechConfig = "{\"context\":{\"synthesis\":{\"audio\":{\"metadataoptions\":{\"sentenceBoundaryEnabled\":\"false\",\"wordBoundaryEnabled\":\"true\"},\"outputFormat\":\"audio-24khz-48kbitrate-mono-mp3\"}}}}";
-            var speechConfigMessage = $"X-Timestamp:{DateTime.UtcNow:yyyy-MM-ddTHH:mm:ss.fffZ}\r\nContent-Type:application/json; charset=utf-8\r\nPath:speech.config\r\n\r\n{speechConfig}";
+            var wordBoundaryEnabled = _config.BoundaryType == "WordBoundary" ? "true" : "false";
+            var sentenceBoundaryEnabled = _config.BoundaryType == "SentenceBoundary" ? "true" : "false";
+
+            var speechConfig = "{\"context\":{\"synthesis\":{\"audio\":{\"metadataoptions\":{\"sentenceBoundaryEnabled\":\"" + sentenceBoundaryEnabled + "\",\"wordBoundaryEnabled\":\"" + wordBoundaryEnabled + "\"},\"outputFormat\":\"audio-24khz-48kbitrate-mono-mp3\"}}}}";
+            var speechConfigMessage = $"X-Timestamp:{GetDateString()}\r\nContent-Type:application/json; charset=utf-8\r\nPath:speech.config\r\n\r\n{speechConfig}";
             await SendMessageAsync(webSocket, speechConfigMessage, cancellationToken);
 
             // Send SSML
             var ssml = CreateSsml(part);
-            var ssmlMessage = $"X-RequestId:{Guid.NewGuid():N}\r\nContent-Type:application/ssml+xml\r\nX-Timestamp:{DateTime.UtcNow:yyyy-MM:ddTHH:mm:ss.fffZ}Z\r\nPath:ssml\r\n\r\n{ssml}";
+            var requestId = Guid.NewGuid().ToString("N").ToUpper();
+            var ssmlMessage = $"X-RequestId:{requestId}\r\nContent-Type:application/ssml+xml\r\nX-Timestamp:{GetDateString()}Z\r\nPath:ssml\r\n\r\n{ssml}";
             await SendMessageAsync(webSocket, ssmlMessage, cancellationToken);
 
             var audioWasReceivedInThisTurn = false;
@@ -136,7 +155,7 @@ public class Communicate
 
             if (!audioWasReceivedInThisTurn && !cancellationToken.IsCancellationRequested)
             {
-                Console.WriteLine("[Warning] No audio was received for the current text part. This might indicate an issue or an empty audio segment.");
+                throw new NoAudioReceivedException("No audio was received for the current text part. This might indicate an issue or an empty audio segment.");
             }
         }
     }
@@ -164,28 +183,39 @@ public class Communicate
                "</speak>";
     }
 
+    private static string GetDateString()
+    {
+        return DateTime.UtcNow.ToString("ddd MMM dd yyyy HH:mm:ss 'GMT+0000 (Coordinated Universal Time)'", System.Globalization.CultureInfo.InvariantCulture);
+    }
+
     private static async Task SendMessageAsync(ClientWebSocket webSocket, string message, CancellationToken cancellationToken)
     {
         var messageBytes = Encoding.UTF8.GetBytes(message);
         await webSocket.SendAsync(new ArraySegment<byte>(messageBytes), WebSocketMessageType.Text, true, cancellationToken);
     }
 
-    
-     private static async Task<(Dictionary<string, string>? headers, byte[] data)> ReceiveMessageAsync(ClientWebSocket webSocket, CancellationToken cancellationToken)
+    private async Task<(Dictionary<string, string>? headers, byte[] data)> ReceiveMessageAsync(ClientWebSocket webSocket, CancellationToken cancellationToken)
     {
         using var memoryStream = new MemoryStream();
-        var buffer = new byte[1024 * 4]; // 4KB buffer
+        var buffer = new byte[1024 * 8]; // 8KB buffer
         WebSocketReceiveResult result;
 
-        do
+        try
         {
-            result = await webSocket.ReceiveAsync(new ArraySegment<byte>(buffer), cancellationToken);
-            if (result.MessageType == WebSocketMessageType.Close)
+            do
             {
-                return (null, Array.Empty<byte>());
-            }
-            memoryStream.Write(buffer, 0, result.Count);
-        } while (!result.EndOfMessage);
+                result = await webSocket.ReceiveAsync(new ArraySegment<byte>(buffer), cancellationToken);
+                if (result.MessageType == WebSocketMessageType.Close)
+                {
+                    return (null, Array.Empty<byte>());
+                }
+                memoryStream.Write(buffer, 0, result.Count);
+            } while (!result.EndOfMessage);
+        }
+        catch (System.Net.WebSockets.WebSocketException ex)
+        {
+            throw new EdgeTTS.NET.WebSocketException("WebSocket receive error", ex);
+        }
 
         memoryStream.Seek(0, SeekOrigin.Begin);
         var messageBytes = memoryStream.ToArray();
@@ -194,16 +224,14 @@ public class Communicate
         {
             if (messageBytes.Length < 2)
             {
-                //Console.WriteLine("[WebSocket-Receive] Warning: Binary message too short to contain header length.");
-                return (new Dictionary<string, string>(), Array.Empty<byte>());
+                throw new UnexpectedResponseException("Binary message too short to contain header length.");
             }
 
             var headerLength = (messageBytes[0] << 8) | messageBytes[1]; // Big-endian
 
             if (headerLength > messageBytes.Length - 2)
             {
-                //Console.WriteLine($"[WebSocket-Receive] Warning: Header length ({headerLength}) is greater than remaining data length ({messageBytes.Length - 2}).");
-                return (new Dictionary<string, string>(), Array.Empty<byte>());
+                throw new UnexpectedResponseException($"Header length ({headerLength}) is greater than remaining data length ({messageBytes.Length - 2}).");
             }
 
             var headerData = messageBytes.AsSpan(2, headerLength);
@@ -222,9 +250,6 @@ public class Communicate
 
             if (separatorIndex == -1)
             {
-                // Simple text message without structured headers (e.g., "turn.start", "response" without full headers)
-                // Python handles these as "path not in (b"response", b"turn.start")"
-                // We'll return an empty header dictionary and the full text as data.
                 return (new Dictionary<string, string>(), messageBytes);
             }
 
@@ -237,8 +262,7 @@ public class Communicate
             return (headers, bodyData);
         }
 
-        //Console.WriteLine($"[WebSocket-Receive] Warning: Received unhandled message type: {result.MessageType}");
-        return (new Dictionary<string, string>(), Array.Empty<byte>());
+        throw new UnknownResponseException($"Received unhandled message type: {result.MessageType}");
     }
 
     private static Dictionary<string, string> ParseHeaders(string headersStr)
@@ -278,7 +302,15 @@ public class Communicate
                     var offset = TimeSpan.FromTicks(offsetTicks) + offsetCompensation;
                     var duration = TimeSpan.FromTicks(durationTicks);
 
-                    return new MetadataChunk(type, offset, duration, HttpUtility.HtmlDecode(text));
+                    return new MetadataChunk(type, offset, duration, WebUtility.HtmlDecode(text));
+                }
+                else if (type == "SessionEnd")
+                {
+                    continue;
+                }
+                else
+                {
+                    throw new UnknownResponseException($"Unknown metadata type: {type}");
                 }
             }
         }

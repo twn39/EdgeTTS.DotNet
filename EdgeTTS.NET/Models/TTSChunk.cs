@@ -9,7 +9,7 @@ public record MetadataChunk(
     string MetadataType, 
     TimeSpan Offset, 
     TimeSpan Duration, 
-    string Text) : TTSChunk("metadata");
+    string Text) : TTSChunk(MetadataType);
 
 public record TurnEndChunk() : TTSChunk("turn.end");
 

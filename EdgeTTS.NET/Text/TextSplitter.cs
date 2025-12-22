@@ -1,7 +1,7 @@
 namespace EdgeTTS.NET.Text;
 
 using System.Text;
-using System.Web;
+using System.Net;
 
 
 /// <summary>
@@ -26,13 +26,17 @@ internal static class TextSplitter
                 splitAt = FindSafeUtf8SplitPoint(remainingBytes.Span[..byteLength]);
             }
 
-            splitAt = AdjustForXmlEntity(remainingBytes.Span, splitAt);
+            if (splitAt > 0)
+            {
+                splitAt = AdjustForXmlEntity(remainingBytes.Span, splitAt);
+            }
 
             if (splitAt <= 0)
             {
-                // Cannot find a safe split point, force split at byteLength
-                // This might break things but prevents an infinite loop.
-                splitAt = byteLength;
+                // If we can't find a safe split point (e.g. at the start of an entity that's too long)
+                // we have no choice but to split at a safe UTF-8 boundary within the limit.
+                splitAt = FindSafeUtf8SplitPoint(remainingBytes.Span[..byteLength]);
+                if (splitAt <= 0) splitAt = 1; // Force at least one byte to prevent infinite loop
             }
 
             var chunkBytes = remainingBytes[..splitAt].ToArray();
@@ -43,6 +47,12 @@ internal static class TextSplitter
             }
 
             remainingBytes = remainingBytes[splitAt..];
+            
+            // Consume leading whitespace for next chunk to avoid splitAt=0 issues
+            while (remainingBytes.Length > 0 && (remainingBytes.Span[0] == ' ' || remainingBytes.Span[0] == '\n' || remainingBytes.Span[0] == '\r'))
+            {
+                remainingBytes = remainingBytes[1..];
+            }
         }
 
         var lastChunk = Encoding.UTF8.GetString(remainingBytes.Span).Trim();

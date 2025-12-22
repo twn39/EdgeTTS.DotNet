@@ -12,13 +12,15 @@ public record TTSConfig
     public string Rate { get; }
     public string Volume { get; }
     public string Pitch { get; }
+    public string BoundaryType { get; }
 
-    public TTSConfig(string? voice = null, string rate = "+0%", string volume = "+0%", string pitch = "+0Hz")
+    public TTSConfig(string? voice = null, string rate = "+0%", string volume = "+0%", string pitch = "+0Hz", string boundaryType = "SentenceBoundary")
     {
         Voice = ValidateVoice(voice ?? Constants.DefaultVoice);
         Rate = ValidateStringParam(nameof(rate), rate, @"^[+-]\d+%$");
         Volume = ValidateStringParam(nameof(volume), volume, @"^[+-]\d+%$");
         Pitch = ValidateStringParam(nameof(pitch), pitch, @"^[+-]\d+Hz$");
+        BoundaryType = boundaryType == "WordBoundary" ? "WordBoundary" : "SentenceBoundary";
     }
 
     private static string ValidateStringParam(string paramName, string paramValue, string pattern)
