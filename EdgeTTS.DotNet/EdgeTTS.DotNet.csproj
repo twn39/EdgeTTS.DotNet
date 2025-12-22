@@ -4,15 +4,20 @@
         <TargetFramework>net9.0</TargetFramework>
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
-        <Version>0.1.0</Version>
+        <Version>0.1.2</Version>
         <Authors>Curry</Authors>
         <Description>A C# (.NET) library for Microsoft Edge's online Text-to-Speech service. Feature-complete migration of the Python edge-tts library.</Description>
         <PackageTags>edge;tts;text-to-speech;microsoft-edge;speech-synthesis</PackageTags>
+        <PackageReadmeFile>README.md</PackageReadmeFile>
         <PackageLicenseExpression>MIT</PackageLicenseExpression>
         <PackageProjectUrl>https://github.com/twn39/EdgeTTS.DotNet</PackageProjectUrl>
         <RepositoryUrl>https://github.com/twn39/EdgeTTS.DotNet</RepositoryUrl>
         <RepositoryType>git</RepositoryType>
     </PropertyGroup>
+
+    <ItemGroup>
+        <None Include="..\README.md" Pack="true" PackagePath="\" />
+    </ItemGroup>
 
     <ItemGroup>
         <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo">
