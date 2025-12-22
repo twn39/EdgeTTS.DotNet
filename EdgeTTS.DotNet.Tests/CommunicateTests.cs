@@ -1,7 +1,7 @@
 using Xunit;
 using System.Reflection;
 
-namespace EdgeTTS.NET.Tests;
+namespace EdgeTTS.DotNet.Tests;
 
 public class CommunicateTests
 {

@@ -1,8 +1,8 @@
-using EdgeTTS.NET.Text;
+using EdgeTTS.DotNet.Text;
 using Xunit;
 using System.Text;
 
-namespace EdgeTTS.NET.Tests;
+namespace EdgeTTS.DotNet.Tests;
 
 public class TextSplitterTests
 {

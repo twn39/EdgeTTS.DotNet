@@ -1,4 +1,4 @@
-namespace EdgeTTS.NET;
+namespace EdgeTTS.DotNet;
 
 /// <summary>
 /// Contains constants for the EdgeTTS library.

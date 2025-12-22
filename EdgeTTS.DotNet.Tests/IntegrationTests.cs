@@ -1,9 +1,9 @@
 using Xunit;
 using Xunit.Abstractions;
-using EdgeTTS.NET;
-using EdgeTTS.NET.Models;
+using EdgeTTS.DotNet;
+using EdgeTTS.DotNet.Models;
 
-namespace EdgeTTS.NET.Tests;
+namespace EdgeTTS.DotNet.Tests;
 
 public class IntegrationTests
 {

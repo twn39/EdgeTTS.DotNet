@@ -1,4 +1,4 @@
-namespace EdgeTTS.NET.Models;
+namespace EdgeTTS.DotNet.Models;
 
 using System.Text.Json.Serialization;
 

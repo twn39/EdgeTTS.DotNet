@@ -1,4 +1,4 @@
-namespace EdgeTTS.NET;
+namespace EdgeTTS.DotNet;
 
 using System.Net.Http.Headers;
 using System.Security.Cryptography;

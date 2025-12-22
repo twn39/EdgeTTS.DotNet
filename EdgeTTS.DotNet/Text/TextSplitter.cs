@@ -1,4 +1,4 @@
-namespace EdgeTTS.NET.Text;
+namespace EdgeTTS.DotNet.Text;
 
 using System.Text;
 using System.Net;

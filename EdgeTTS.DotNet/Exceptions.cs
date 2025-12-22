@@ -1,4 +1,4 @@
-namespace EdgeTTS.NET;
+namespace EdgeTTS.DotNet;
 
 public class EdgeTTSException : Exception
 {

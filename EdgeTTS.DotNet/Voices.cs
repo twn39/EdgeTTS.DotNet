@@ -1,4 +1,4 @@
-namespace EdgeTTS.NET;
+namespace EdgeTTS.DotNet;
 
 using System.Net;
 using System.Text.Json;

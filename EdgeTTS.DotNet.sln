@@ -1,8 +1,8 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EdgeTTS.NET", "EdgeTTS.NET\EdgeTTS.NET.csproj", "{588E3644-D52C-429A-A64E-8498B0499D0F}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EdgeTTS.DotNet", "EdgeTTS.DotNet\EdgeTTS.DotNet.csproj", "{588E3644-D52C-429A-A64E-8498B0499D0F}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EdgeTTS.NET.Tests", "EdgeTTS.NET.Tests\EdgeTTS.NET.Tests.csproj", "{822F278D-F7BD-4426-830E-B2FF975E042B}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EdgeTTS.DotNet.Tests", "EdgeTTS.DotNet.Tests\EdgeTTS.DotNet.Tests.csproj", "{822F278D-F7BD-4426-830E-B2FF975E042B}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

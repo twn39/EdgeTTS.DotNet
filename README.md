@@ -1,6 +1,6 @@
-# EdgeTTS.NET
+# EdgeTTS.DotNet
 
-`EdgeTTS.NET` is a C# (.NET) library that allows you to use Microsoft Edge's online text-to-speech service. It is a feature-complete migration of the popular Python [edge-tts](https://github.com/rany2/edge-tts) library, designed for performance, cross-platform compatibility, and ease of use.
+`EdgeTTS.DotNet` is a C# (.NET) library that allows you to use Microsoft Edge's online text-to-speech service. It is a feature-complete migration of the popular Python [edge-tts](https://github.com/rany2/edge-tts) library, designed for performance, cross-platform compatibility, and ease of use.
 
 ## Features
 
@@ -13,10 +13,10 @@
 
 ## Installation
 
-You can reference the `EdgeTTS.NET` project in your solution:
+You can reference the `EdgeTTS.DotNet` project in your solution:
 
 ```bash
-dotnet add reference path/to/EdgeTTS.NET/EdgeTTS.NET.csproj
+dotnet add reference path/to/EdgeTTS.DotNet/EdgeTTS.DotNet.csproj
 ```
 
 ## Quick Start
@@ -26,7 +26,7 @@ dotnet add reference path/to/EdgeTTS.NET/EdgeTTS.NET.csproj
 Save text to an MP3 file:
 
 ```csharp
-using EdgeTTS.NET;
+using EdgeTTS.DotNet;
 
 var request = new Communicate("Hello, world!", voice: "en-US-AriaNeural");
 await request.SaveAsync("hello.mp3");
@@ -37,8 +37,8 @@ await request.SaveAsync("hello.mp3");
 Use the `SubMaker` class to create subtitles:
 
 ```csharp
-using EdgeTTS.NET;
-using EdgeTTS.NET.Models;
+using EdgeTTS.DotNet;
+using EdgeTTS.DotNet.Models;
 
 var communicate = new Communicate("Hello world!", rate: "+10%", boundaryType: "WordBoundary");
 var subMaker = new SubMaker();
@@ -62,7 +62,7 @@ File.WriteAllText("hello.srt", srt);
 ### Listing Available Voices
 
 ```csharp
-using EdgeTTS.NET;
+using EdgeTTS.DotNet;
 
 var voices = await Voices.ListVoicesAsync();
 foreach (var voice in voices)

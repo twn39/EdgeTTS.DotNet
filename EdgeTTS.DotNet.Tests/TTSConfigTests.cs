@@ -1,7 +1,7 @@
-using EdgeTTS.NET.Models;
+using EdgeTTS.DotNet.Models;
 using Xunit;
 
-namespace EdgeTTS.NET.Tests;
+namespace EdgeTTS.DotNet.Tests;
 
 public class TTSConfigTests
 {

@@ -1,4 +1,4 @@
-namespace EdgeTTS.NET;
+namespace EdgeTTS.DotNet;
 
 using System.Net.WebSockets;
 using System.Text;
@@ -204,7 +204,7 @@ public class Communicate
         }
         catch (System.Net.WebSockets.WebSocketException ex)
         {
-            throw new EdgeTTS.NET.WebSocketException("WebSocket receive error", ex);
+            throw new EdgeTTS.DotNet.WebSocketException("WebSocket receive error", ex);
         }
 
         memoryStream.Seek(0, SeekOrigin.Begin);
@@ -304,10 +304,10 @@ public class Communicate
                 }
             }
         }
-        catch (JsonException ex)
+        catch (JsonException)
         {
         }
-        catch (Exception ex)
+        catch (Exception)
         {
         }
         return null;

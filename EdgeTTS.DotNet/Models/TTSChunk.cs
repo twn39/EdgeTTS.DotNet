@@ -1,4 +1,4 @@
-namespace EdgeTTS.NET.Models;
+namespace EdgeTTS.DotNet.Models;
 
 
 public abstract record TTSChunk(string Type);

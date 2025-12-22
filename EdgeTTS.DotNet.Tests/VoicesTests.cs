@@ -1,7 +1,7 @@
 using Xunit;
 using Xunit.Abstractions;
 
-namespace EdgeTTS.NET.Tests;
+namespace EdgeTTS.DotNet.Tests;
 
 public class VoicesTests
 {
