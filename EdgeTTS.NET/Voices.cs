@@ -2,7 +2,7 @@ namespace EdgeTTS.NET;
 
 using System.Net;
 using System.Text.Json;
-using EdgeTTS.NET.Models;
+using Models;
 
 
 public static class Voices
