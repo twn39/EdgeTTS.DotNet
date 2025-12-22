@@ -27,6 +27,7 @@ public static class Voices
         {
             client.DefaultRequestHeaders.TryAddWithoutValidation(header.Key, header.Value);
         }
+        client.DefaultRequestHeaders.TryAddWithoutValidation("Cookie", $"muid={Drm.GenerateMuid()};");
 
         var url = $"{Constants.VoiceListUrl}&Sec-MS-GEC={Drm.GenerateSecMsGec()}&Sec-MS-GEC-Version={Constants.SecMsGecVersion}";
         var response = await client.GetAsync(url, cancellationToken);

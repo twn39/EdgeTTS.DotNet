@@ -60,15 +60,11 @@ public class Communicate
             {
                 webSocket.Options.SetRequestHeader(header.Key, header.Value);
             }
+            webSocket.Options.SetRequestHeader("Cookie", $"muid={Drm.GenerateMuid()};");
 
-            if (!string.IsNullOrEmpty(_proxy))
-            {
-                Console.WriteLine($"[Warning] Explicit proxy '{_proxy}' provided, but ClientWebSocket's direct proxy support is limited. Relying on environment variables.");
-            }
 
             var connectId = Guid.NewGuid().ToString("N");
             var wssUrl = $"{Constants.WssUrl}&ConnectionId={connectId}&Sec-MS-GEC={Drm.GenerateSecMsGec()}&Sec-MS-GEC-Version={Constants.SecMsGecVersion}";
-
             await webSocket.ConnectAsync(new Uri(wssUrl), cancellationToken);
 
             // Send speech config
@@ -76,12 +72,12 @@ public class Communicate
             var sentenceBoundaryEnabled = _config.BoundaryType == "SentenceBoundary" ? "true" : "false";
 
             var speechConfig = "{\"context\":{\"synthesis\":{\"audio\":{\"metadataoptions\":{\"sentenceBoundaryEnabled\":\"" + sentenceBoundaryEnabled + "\",\"wordBoundaryEnabled\":\"" + wordBoundaryEnabled + "\"},\"outputFormat\":\"audio-24khz-48kbitrate-mono-mp3\"}}}}";
-            var speechConfigMessage = $"X-Timestamp:{GetDateString()}\r\nContent-Type:application/json; charset=utf-8\r\nPath:speech.config\r\n\r\n{speechConfig}";
+            var speechConfigMessage = $"X-Timestamp:{GetDateString()}\r\nContent-Type:application/json; charset=utf-8\r\nPath:speech.config\r\n\r\n{speechConfig}\r\n";
             await SendMessageAsync(webSocket, speechConfigMessage, cancellationToken);
 
             // Send SSML
             var ssml = CreateSsml(part);
-            var requestId = Guid.NewGuid().ToString("N").ToUpper();
+            var requestId = Guid.NewGuid().ToString("N");
             var ssmlMessage = $"X-RequestId:{requestId}\r\nContent-Type:application/ssml+xml\r\nX-Timestamp:{GetDateString()}Z\r\nPath:ssml\r\n\r\n{ssml}";
             await SendMessageAsync(webSocket, ssmlMessage, cancellationToken);
 
@@ -89,7 +85,10 @@ public class Communicate
             while (webSocket.State == WebSocketState.Open && !cancellationToken.IsCancellationRequested)
             {
                 var (headers, data) = await ReceiveMessageAsync(webSocket, cancellationToken);
-                if (headers is null) break; // Connection closed or error
+                if (headers is null)
+                {
+                    break; 
+                }
 
                 if (headers.TryGetValue("Path", out var path))
                 {
@@ -120,13 +119,9 @@ public class Communicate
                             {
                                 continue; // Skip this message
                             }
-                            // If Content-Type is None but data is NOT empty, this is an unexpected response.
-                            // Console.WriteLine("[WebSocket] Warning: Received audio message with no Content-Type but with data. Treating as audio/mpeg.");
-                            // Fall through to yield it as audio.
                         }
                         else if (!contentType.StartsWith("audio/mpeg", StringComparison.OrdinalIgnoreCase))
                         {
-                            // Console.WriteLine($"[WebSocket] Warning: Received audio message with unexpected Content-Type: {contentType}. Skipping.");
                             continue; // Skip this message
                         }
 
@@ -142,14 +137,9 @@ public class Communicate
                     // In this case, we must rely on Content-Type.
                     if (headers.TryGetValue("Content-Type", out var contentType) && contentType.StartsWith("audio/mpeg", StringComparison.OrdinalIgnoreCase))
                     {
-                        // Console.WriteLine($"[WebSocket] Matched Content-Type: {contentType}. Yielding audio chunk.");
                         audioWasReceivedInThisTurn = true;
                         yield return new AudioChunk(data);
                     }
-                    //else
-                    //{
-                        //Console.WriteLine($"[WebSocket] Received message with unknown Path or Content-Type. Path: {headers.GetValueOrDefault("Path", "N/A")}, Content-Type: {headers.GetValueOrDefault("Content-Type", "N/A")}. Data length: {data.Length}");
-                    //}
                 }
             }
 
@@ -316,11 +306,9 @@ public class Communicate
         }
         catch (JsonException ex)
         {
-            Console.WriteLine($"[ParseMetadata] Error parsing JSON: {ex.Message}. Raw data: {Encoding.UTF8.GetString(data)}");
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[ParseMetadata] Unexpected error: {ex.Message}");
         }
         return null;
     }

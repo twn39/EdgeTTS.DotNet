@@ -23,7 +23,6 @@ internal static class Drm
             var serverDate = headers.Date.Value.ToUnixTimeSeconds();
             var clientDate = GetUnixTimestamp();
             _clockSkewSeconds += serverDate - clientDate;
-            Console.WriteLine($"[DRM] Clock skew adjusted by {serverDate - clientDate:F2} seconds. New skew: {_clockSkewSeconds:F2}s"); // 添加日志
         }
         else if (headers.TryGetValues("Date", out var dateValues)) // 尝试直接从字符串获取
         {
@@ -35,7 +34,6 @@ internal static class Drm
                 {
                     var clientDate = GetUnixTimestamp();
                     _clockSkewSeconds += serverDate.Value - clientDate;
-                    Console.WriteLine($"[DRM] Clock skew adjusted by {serverDate.Value - clientDate:F2} seconds (string parse). New skew: {_clockSkewSeconds:F2}s"); // 添加日志
                 }
             }
         }
@@ -92,5 +90,13 @@ internal static class Drm
         var hash = SHA256.HashData(Encoding.ASCII.GetBytes(strToHash));
 
         return BitConverter.ToString(hash).Replace("-", "").ToUpper();
+    }
+
+    /// <summary>
+    /// Generates a random MUID.
+    /// </summary>
+    public static string GenerateMuid()
+    {
+        return Guid.NewGuid().ToString("N").ToUpper();
     }
 }

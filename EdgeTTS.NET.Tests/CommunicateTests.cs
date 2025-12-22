@@ -18,4 +18,26 @@ public class CommunicateTests
 
         Assert.Equal("Line1 Line2 Line3", result);
     }
+
+    [Fact]
+    public async Task SaveAsync_ShouldSaveAudioFile()
+    {
+        var filename = "hello.mp3";
+        try
+        {
+            var request = new Communicate("Hello, world!", voice: "en-US-AriaNeural");
+            await request.SaveAsync(filename);
+
+            Assert.True(File.Exists(filename));
+            var fileInfo = new FileInfo(filename);
+            Assert.True(fileInfo.Length > 0);
+        }
+        finally
+        {
+            if (File.Exists(filename))
+            {
+                File.Delete(filename);
+            }
+        }
+    }
 }
