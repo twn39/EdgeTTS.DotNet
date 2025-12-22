@@ -16,7 +16,7 @@
 You can reference the `EdgeTTS.DotNet` project in your solution:
 
 ```bash
-dotnet add reference path/to/EdgeTTS.DotNet/EdgeTTS.DotNet.csproj
+dotnet add package EdgeTTS.DotNet
 ```
 
 ## Quick Start
