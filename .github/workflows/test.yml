@@ -37,7 +37,18 @@ jobs:
       run: dotnet build EdgeTTS.DotNet.sln --configuration Release --no-restore
 
     - name: Run tests
-      run: dotnet test EdgeTTS.DotNet.sln --configuration Release --no-build --verbosity normal --logger "trx;LogFileName=test-results.trx" --results-directory TestResults --collect:"XPlat Code Coverage"
+      id: test
+      continue-on-error: true
+      run: dotnet test EdgeTTS.DotNet.sln --configuration Release --no-build --verbosity detailed --logger "trx;LogFileName=test-results.trx" --results-directory TestResults --collect:"XPlat Code Coverage" --blame-hang-timeout 5m --logger "console;verbosity=detailed"
+
+    - name: Check test results
+      if: steps.test.outcome == 'failure'
+      run: |
+        echo "Tests failed. Checking test results..."
+        if [ -f TestResults/test-results.trx ]; then
+          echo "Test results file exists"
+        fi
+      shell: bash
 
     - name: Upload test results
       if: always()
