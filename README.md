@@ -1,5 +1,13 @@
 # EdgeTTS.DotNet
 
+[![NuGet Version](https://img.shields.io/nuget/v/EdgeTTS.DotNet?style=flat&logo=nuget)](https://www.nuget.org/packages/EdgeTTS.DotNet)
+[![NuGet Downloads](https://img.shields.io/nuget/dt/EdgeTTS.DotNet?style=flat&logo=nuget)](https://www.nuget.org/packages/EdgeTTS.DotNet)
+[![Build Status](https://img.shields.io/github/actions/workflow/status/twn39/EdgeTTS.DotNet/test.yml?branch=main&style=flat&logo=github)](https://github.com/twn39/EdgeTTS.DotNet/actions/workflows/test.yml)
+[![Code Coverage](https://img.shields.io/codecov/c/github/twn39/EdgeTTS.DotNet?style=flat&logo=codecov)](https://codecov.io/gh/twn39/EdgeTTS.DotNet)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=flat)](https://opensource.org/licenses/MIT)
+[![.NET](https://img.shields.io/badge/.NET-9.0%20%7C%2010.0-purple?style=flat&logo=.net)](https://dotnet.microsoft.com/download/dotnet/9.0)
+[![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey?style=flat)](https://github.com/twn39/EdgeTTS.DotNet)
+
 `EdgeTTS.DotNet` is a C# (.NET) library that allows you to use Microsoft Edge's online text-to-speech service. It is a feature-complete migration of the popular Python [edge-tts](https://github.com/rany2/edge-tts) library, designed for performance, cross-platform compatibility, and ease of use.
 
 ## Features

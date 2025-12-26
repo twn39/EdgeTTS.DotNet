@@ -4,7 +4,7 @@
         <TargetFramework>net9.0</TargetFramework>
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
-        <Version>0.1.2</Version>
+        <Version>0.1.3</Version>
         <Authors>Curry</Authors>
         <Description>A C# (.NET) library for Microsoft Edge's online Text-to-Speech service. Feature-complete migration of the Python edge-tts library.</Description>
         <PackageTags>edge;tts;text-to-speech;microsoft-edge;speech-synthesis</PackageTags>
