@@ -96,16 +96,16 @@ jobs:
           --verbosity normal \
           --collect:"XPlat Code Coverage" \
           --results-directory TestResults \
-          -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover
+          -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=cobertura
 
     - name: Generate coverage report
       run: |
-        dotnet-coverage merge TestResults/**/coverage.opencover.xml -o coverage/coverage.opencover.xml -f opencover
+        dotnet-coverage merge TestResults/**/coverage.cobertura.xml -o coverage/coverage.cobertura.xml -f cobertura
 
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v4
       with:
-        files: ./coverage/coverage.opencover.xml
+        files: ./coverage/coverage.cobertura.xml
         flags: unittests
         name: codecov-umbrella
         fail_ci_if_error: false
