@@ -43,14 +43,14 @@ jobs:
       if: always()
       uses: actions/upload-artifact@v4
       with:
-        name: test-results-${{ matrix.os }}
+        name: test-results-${{ matrix.os }}-dotnet${{ matrix.dotnet-version }}
         path: TestResults/**/*.trx
 
     - name: Upload coverage reports
       if: always()
       uses: actions/upload-artifact@v4
       with:
-        name: coverage-report-${{ matrix.os }}
+        name: coverage-report-${{ matrix.os }}-dotnet${{ matrix.dotnet-version }}
         path: TestResults/**/coverage.cobertura.xml
 
   coverage:
