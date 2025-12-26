@@ -85,6 +85,9 @@ jobs:
     - name: Restore dependencies
       run: dotnet restore EdgeTTS.DotNet.sln
 
+    - name: Build solution
+      run: dotnet build EdgeTTS.DotNet.sln --configuration Release --no-restore
+
     - name: Run tests with coverage
       run: |
         dotnet test EdgeTTS.DotNet.sln \
