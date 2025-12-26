@@ -1,0 +1,95 @@
+name: Run Tests
+
+on:
+  push:
+    branches: [ main, master, develop ]
+  pull_request:
+    branches: [ main, master, develop ]
+
+jobs:
+  test:
+    name: Test on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        dotnet-version: ['9.0.x', '10.0.x']
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Setup .NET SDK
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: ${{ matrix.dotnet-version }}
+
+    - name: Restore dependencies
+      run: dotnet restore EdgeTTS.DotNet.sln
+
+    - name: Build solution
+      run: dotnet build EdgeTTS.DotNet.sln --configuration Release --no-restore
+
+    - name: Run tests
+      run: dotnet test EdgeTTS.DotNet.sln --configuration Release --no-build --verbosity normal --logger "trx;LogFileName=test-results.trx" --results-directory TestResults --collect:"XPlat Code Coverage"
+
+    - name: Upload test results
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: test-results-${{ matrix.os }}
+        path: TestResults/**/*.trx
+
+    - name: Upload coverage reports
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: coverage-report-${{ matrix.os }}
+        path: TestResults/**/coverage.cobertura.xml
+
+  coverage:
+    name: Code Coverage Report
+    runs-on: ubuntu-latest
+    needs: test
+    if: github.event_name == 'pull_request' || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup .NET SDK
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '9.0.x'
+
+    - name: Install dotnet-coverage tool
+      run: dotnet tool install -g dotnet-coverage
+
+    - name: Restore dependencies
+      run: dotnet restore EdgeTTS.DotNet.sln
+
+    - name: Run tests with coverage
+      run: |
+        dotnet test EdgeTTS.DotNet.sln \
+          --configuration Release \
+          --no-build \
+          --verbosity normal \
+          --collect:"XPlat Code Coverage" \
+          --results-directory TestResults \
+          -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover
+
+    - name: Generate coverage report
+      run: |
+        dotnet-coverage merge TestResults/**/coverage.opencover.xml -o coverage/coverage.opencover.xml -f opencover
+
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v4
+      with:
+        files: ./coverage/coverage.opencover.xml
+        flags: unittests
+        name: codecov-umbrella
+        fail_ci_if_error: false
+        verbose: true
