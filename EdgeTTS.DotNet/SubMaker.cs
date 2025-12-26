@@ -37,10 +37,10 @@ public class SubMaker
         var sb = new StringBuilder();
         foreach (var cue in _cues)
         {
-            sb.AppendLine(cue.Index.ToString());
-            sb.AppendLine($"{FormatTime(cue.Start)} --> {FormatTime(cue.End)}");
-            sb.AppendLine(cue.Content);
-            sb.AppendLine();
+            sb.Append(cue.Index.ToString()).Append('\n');
+            sb.Append($"{FormatTime(cue.Start)} --> {FormatTime(cue.End)}").Append('\n');
+            sb.Append(cue.Content).Append('\n');
+            sb.Append('\n');
         }
         return sb.ToString().TrimEnd() + "\n";
     }
