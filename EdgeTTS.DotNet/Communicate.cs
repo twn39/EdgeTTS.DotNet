@@ -55,19 +55,56 @@ public class Communicate
         {
             if (cancellationToken.IsCancellationRequested) break;
 
-            using var webSocket = new ClientWebSocket();
-            foreach (var header in Constants.WssHeaders)
+            // Try to stream, with one retry on 403 (clock skew)
+            ClientWebSocket? webSocket = null;
+            for (var attempt = 0; attempt < 2; attempt++)
             {
-                webSocket.Options.SetRequestHeader(header.Key, header.Value);
+                webSocket?.Dispose();
+                webSocket = new ClientWebSocket();
+
+                // Enable permessage-deflate compression (matches Python's compress=15)
+                webSocket.Options.DangerousDeflateOptions = new WebSocketDeflateOptions
+                {
+                    ClientMaxWindowBits = 15,
+                    ServerMaxWindowBits = 15
+                };
+
+                foreach (var header in Constants.WssHeaders)
+                {
+                    webSocket.Options.SetRequestHeader(header.Key, header.Value);
+                }
+                webSocket.Options.SetRequestHeader("Cookie", $"muid={Drm.GenerateMuid()};");
+
+                var connectId = Guid.NewGuid().ToString("N");
+                var wssUrl = $"{Constants.WssUrl}&ConnectionId={connectId}&Sec-MS-GEC={Drm.GenerateSecMsGec()}&Sec-MS-GEC-Version={Constants.SecMsGecVersion}";
+
+                try
+                {
+                    await webSocket.ConnectAsync(new Uri(wssUrl), cancellationToken);
+                    break; // Connection successful
+                }
+                catch (System.Net.WebSockets.WebSocketException ex) when (attempt == 0 && ex.InnerException is HttpRequestException httpEx && httpEx.StatusCode == HttpStatusCode.Forbidden)
+                {
+                    // 403 error - likely clock skew. Adjust and retry.
+                    try
+                    {
+                        Drm.HandleClientResponseError(new Dictionary<string, string>());
+                    }
+                    catch (SkewAdjustmentException)
+                    {
+                        // If we can't get the date from headers, still retry with regenerated GEC
+                    }
+                }
             }
-            webSocket.Options.SetRequestHeader("Cookie", $"muid={Drm.GenerateMuid()};");
-
-
-            var connectId = Guid.NewGuid().ToString("N");
-            var wssUrl = $"{Constants.WssUrl}&ConnectionId={connectId}&Sec-MS-GEC={Drm.GenerateSecMsGec()}&Sec-MS-GEC-Version={Constants.SecMsGecVersion}";
-            await webSocket.ConnectAsync(new Uri(wssUrl), cancellationToken);
 
             // Send speech config
+            if (webSocket == null || webSocket.State != WebSocketState.Open)
+            {
+                throw new EdgeTTS.DotNet.WebSocketException("Failed to connect to the WebSocket after retry.");
+            }
+
+            try
+            {
             var wordBoundaryEnabled = _config.BoundaryType == "WordBoundary" ? "true" : "false";
             var sentenceBoundaryEnabled = _config.BoundaryType == "SentenceBoundary" ? "true" : "false";
 
@@ -107,34 +144,32 @@ public class Communicate
                         yield return new TurnEndChunk();
                         break;
                     }
-                    else if (path == "audio") // Directly handle Path: audio
+                    else if (path == "audio")
                     {
-                        // If Content-Type is present, it must be audio/mpeg.
-                        // If Content-Type is missing AND data is empty, then continue (skip).
                         headers.TryGetValue("Content-Type", out var contentType);
 
-                        if (string.IsNullOrEmpty(contentType)) // Content-Type is None
+                        if (string.IsNullOrEmpty(contentType))
                         {
                             if (data.Length == 0)
                             {
-                                continue; // Skip this message
+                                continue;
                             }
                         }
                         else if (!contentType.StartsWith("audio/mpeg", StringComparison.OrdinalIgnoreCase))
                         {
-                            continue; // Skip this message
+                            continue;
                         }
 
-                        // If we reach here, it's a valid audio chunk (either with audio/mpeg or no Content-Type but data)
                         audioWasReceivedInThisTurn = true;
                         yield return new AudioChunk(data);
                     }
-                    // For other paths like "response", "turn.start", we just ignore them for yielding.
+                    else if (path != "response" && path != "turn.start")
+                    {
+                        throw new UnknownResponseException($"Unknown path received: {path}");
+                    }
                 }
                 else
                 {
-                    // If no Path header, it's likely a binary audio message without a Path header (which is also possible)
-                    // In this case, we must rely on Content-Type.
                     if (headers.TryGetValue("Content-Type", out var contentType) && contentType.StartsWith("audio/mpeg", StringComparison.OrdinalIgnoreCase))
                     {
                         audioWasReceivedInThisTurn = true;
@@ -145,7 +180,12 @@ public class Communicate
 
             if (!audioWasReceivedInThisTurn && !cancellationToken.IsCancellationRequested)
             {
-                throw new NoAudioReceivedException("No audio was received for the current text part. This might indicate an issue or an empty audio segment.");
+                throw new NoAudioReceivedException("No audio was received. Please verify that your parameters are correct.");
+            }
+            }
+            finally
+            {
+                webSocket.Dispose();
             }
         }
     }
@@ -287,8 +327,6 @@ public class Communicate
                     var durationTicks = metaObj?["Data"]?["Duration"]?.GetValue<long>() ?? 0;
                     var text = metaObj?["Data"]?["text"]?["Text"]?.GetValue<string>() ?? "";
 
-                    // Python's offset and duration are in 100-nanosecond units (ticks)
-                    // C# TimeSpan.FromTicks expects 100-nanosecond units.
                     var offset = TimeSpan.FromTicks(offsetTicks) + offsetCompensation;
                     var duration = TimeSpan.FromTicks(durationTicks);
 
@@ -306,6 +344,10 @@ public class Communicate
         }
         catch (JsonException)
         {
+        }
+        catch (UnknownResponseException)
+        {
+            throw;
         }
         catch (Exception)
         {

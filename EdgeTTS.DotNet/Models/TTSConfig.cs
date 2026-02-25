@@ -40,6 +40,15 @@ public record TTSConfig
             var lang = match.Groups[1].Value;
             var region = match.Groups[2].Value;
             var name = match.Groups[3].Value;
+
+            // Handle hyphenated voice names (e.g. zh-CN-XiaoxiaoMultilingual-v2Neural)
+            var hyphenIndex = name.IndexOf('-');
+            if (hyphenIndex != -1)
+            {
+                region = $"{region}-{name[..hyphenIndex]}";
+                name = name[(hyphenIndex + 1)..];
+            }
+
             return $"Microsoft Server Speech Text to Speech Voice ({lang}-{region}, {name})";
         }
 

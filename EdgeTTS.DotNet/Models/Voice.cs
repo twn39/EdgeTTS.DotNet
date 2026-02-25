@@ -3,6 +3,15 @@ namespace EdgeTTS.DotNet.Models;
 using System.Text.Json.Serialization;
 
 
+public record VoiceTag
+{
+    [JsonPropertyName("ContentCategories")]
+    public List<string> ContentCategories { get; init; } = new();
+
+    [JsonPropertyName("VoicePersonalities")]
+    public List<string> VoicePersonalities { get; init; } = new();
+}
+
 public record Voice
 {
     [JsonPropertyName("Name")]
@@ -25,4 +34,7 @@ public record Voice
 
     [JsonPropertyName("Status")]
     public string Status { get; init; } = string.Empty;
+
+    [JsonPropertyName("VoiceTag")]
+    public VoiceTag VoiceTag { get; init; } = new();
 }

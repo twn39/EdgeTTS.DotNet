@@ -3,7 +3,7 @@ namespace EdgeTTS.DotNet;
 using System.Net.Http.Headers;
 using System.Security.Cryptography;
 using System.Text;
-using System.Globalization; // 添加此 using 语句
+using System.Globalization;
 
 /// <summary>
 /// Handles DRM operations with clock skew correction.
@@ -15,6 +15,7 @@ internal static class Drm
 
     /// <summary>
     /// Adjusts the clock skew based on the server's Date header.
+    /// Throws SkewAdjustmentException if the server date header is missing or unparseable.
     /// </summary>
     public static void HandleClientResponseError(HttpResponseHeaders headers)
     {
@@ -23,8 +24,10 @@ internal static class Drm
             var serverDate = headers.Date.Value.ToUnixTimeSeconds();
             var clientDate = GetUnixTimestamp();
             _clockSkewSeconds += serverDate - clientDate;
+            return;
         }
-        else if (headers.TryGetValues("Date", out var dateValues)) // 尝试直接从字符串获取
+
+        if (headers.TryGetValues("Date", out var dateValues))
         {
             var dateString = dateValues.FirstOrDefault();
             if (!string.IsNullOrEmpty(dateString))
@@ -34,9 +37,33 @@ internal static class Drm
                 {
                     var clientDate = GetUnixTimestamp();
                     _clockSkewSeconds += serverDate.Value - clientDate;
+                    return;
                 }
+                throw new SkewAdjustmentException($"Failed to parse server date: {dateString}");
             }
         }
+
+        throw new SkewAdjustmentException("No server date in headers.");
+    }
+
+    /// <summary>
+    /// Adjusts the clock skew based on a dictionary of headers (e.g. from WebSocket response).
+    /// </summary>
+    public static void HandleClientResponseError(IDictionary<string, string> headers)
+    {
+        if (headers.TryGetValue("Date", out var dateString) && !string.IsNullOrEmpty(dateString))
+        {
+            var serverDate = ParseRfc2616Date(dateString);
+            if (serverDate.HasValue)
+            {
+                var clientDate = GetUnixTimestamp();
+                _clockSkewSeconds += serverDate.Value - clientDate;
+                return;
+            }
+            throw new SkewAdjustmentException($"Failed to parse server date: {dateString}");
+        }
+
+        throw new SkewAdjustmentException("No server date in headers.");
     }
 
     private static double GetUnixTimestamp()
@@ -46,18 +73,14 @@ internal static class Drm
 
     /// <summary>
     /// Parses an RFC 2616 date string into a Unix timestamp.
-    /// Corresponds to Python's parse_rfc2616_date.
     /// </summary>
     private static long? ParseRfc2616Date(string date)
     {
-        // Example: "Wed, 21 Oct 2015 07:28:00 GMT"
-        // Python's %Z is tricky, C# DateTimeOffset.ParseExact is more robust.
-        // We need to handle multiple possible formats.
         string[] formats = new[]
         {
             "ddd, dd MMM yyyy HH:mm:ss 'GMT'",
-            "ddd, dd MMM yyyy HH:mm:ss Z", // For cases where Z is used for UTC
-            "ddd, dd MMM yyyy HH:mm:ss K"  // For general UTC/offset
+            "ddd, dd MMM yyyy HH:mm:ss Z",
+            "ddd, dd MMM yyyy HH:mm:ss K"
         };
 
         if (DateTimeOffset.TryParseExact(date, formats, CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal, out var parsedDate))
@@ -84,7 +107,7 @@ internal static class Drm
         ticks *= 10_000_000; // 1 second = 10,000,000 100-nanosecond intervals
 
         // Create the string to hash by concatenating the ticks and the trusted client token
-        var strToHash = $"{ticks:F0}{Constants.TrustedClientToken}"; // Use F0 to ensure no decimal places
+        var strToHash = $"{ticks:F0}{Constants.TrustedClientToken}";
 
         // Compute the SHA256 hash and return the uppercased hex digest
         var hash = SHA256.HashData(Encoding.ASCII.GetBytes(strToHash));

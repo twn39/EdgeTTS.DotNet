@@ -26,3 +26,9 @@ public class WebSocketException : EdgeTTSException
     public WebSocketException(string message) : base(message) { }
     public WebSocketException(string message, Exception innerException) : base(message, innerException) { }
 }
+
+public class SkewAdjustmentException : EdgeTTSException
+{
+    public SkewAdjustmentException(string message) : base(message) { }
+    public SkewAdjustmentException(string message, Exception innerException) : base(message, innerException) { }
+}
