@@ -29,4 +29,54 @@ public class SubMakerTests
         
         Assert.Throws<ArgumentException>(() => subMaker.Feed(new MetadataChunk("SentenceBoundary", TimeSpan.Zero, TimeSpan.Zero, "")));
     }
+
+    [Fact]
+    public void Feed_WithInvalidType_ShouldThrowArgumentException()
+    {
+        var subMaker = new SubMaker();
+        Assert.Throws<ArgumentException>(() =>
+            subMaker.Feed(new MetadataChunk("InvalidType", TimeSpan.Zero, TimeSpan.Zero, "test")));
+    }
+
+    [Fact]
+    public void Feed_SentenceBoundary_ShouldWork()
+    {
+        var subMaker = new SubMaker();
+        subMaker.Feed(new MetadataChunk("SentenceBoundary", TimeSpan.FromSeconds(0), TimeSpan.FromSeconds(2), "Hello world!"));
+
+        var srt = subMaker.GetSrt();
+        Assert.Contains("Hello world!", srt);
+        Assert.Contains("00:00:00,000 --> 00:00:02,000", srt);
+    }
+
+    [Fact]
+    public void GetSrt_WithNoFeeds_ShouldReturnMinimalString()
+    {
+        var subMaker = new SubMaker();
+        var srt = subMaker.GetSrt();
+        Assert.Equal("\n", srt);
+    }
+
+    [Fact]
+    public void ToString_ShouldReturnSameAsGetSrt()
+    {
+        var subMaker = new SubMaker();
+        subMaker.Feed(new MetadataChunk("WordBoundary", TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(0.5), "Test"));
+
+        Assert.Equal(subMaker.GetSrt(), subMaker.ToString());
+    }
+
+    [Fact]
+    public void Feed_WithMillisecondPrecision_ShouldFormatCorrectly()
+    {
+        var subMaker = new SubMaker();
+        subMaker.Feed(new MetadataChunk(
+            "WordBoundary",
+            new TimeSpan(0, 1, 23, 4, 567),  // 01:23:04.567
+            TimeSpan.FromMilliseconds(100),
+            "Precise"));
+
+        var srt = subMaker.GetSrt();
+        Assert.Contains("01:23:04,567 --> 01:23:04,667", srt);
+    }
 }

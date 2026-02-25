@@ -52,4 +52,42 @@ public class TTSConfigTests
     {
         Assert.Throws<ArgumentException>(() => new TTSConfig(voice: "InvalidVoice"));
     }
+
+    [Fact]
+    public void Constructor_WithHyphenatedVoiceName_ShouldParseCorrectly()
+    {
+        // Voices like zh-CN-XiaoxiaoMultilingual-v2Neural have a hyphen in the name part
+        var config = new TTSConfig("zh-CN-XiaoxiaoMultilingual-v2Neural");
+        Assert.Equal(
+            "Microsoft Server Speech Text to Speech Voice (zh-CN-XiaoxiaoMultilingual, v2Neural)",
+            config.Voice);
+    }
+
+    [Fact]
+    public void Constructor_WithFilPHVoice_ShouldParseCorrectly()
+    {
+        // Standard three-part voice name without hyphen in name
+        var config = new TTSConfig("fil-PH-AngeloNeural");
+        Assert.Equal(
+            "Microsoft Server Speech Text to Speech Voice (fil-PH, AngeloNeural)",
+            config.Voice);
+    }
+
+    [Fact]
+    public void Constructor_WithFullFormatVoice_ShouldAcceptDirectly()
+    {
+        var fullVoice = "Microsoft Server Speech Text to Speech Voice (en-US, AriaNeural)";
+        var config = new TTSConfig(fullVoice);
+        Assert.Equal(fullVoice, config.Voice);
+    }
+
+    [Theory]
+    [InlineData("WordBoundary", "WordBoundary")]
+    [InlineData("SentenceBoundary", "SentenceBoundary")]
+    [InlineData("InvalidType", "SentenceBoundary")] // Falls back to SentenceBoundary
+    public void Constructor_BoundaryType_ShouldNormalize(string input, string expected)
+    {
+        var config = new TTSConfig(boundaryType: input);
+        Assert.Equal(expected, config.BoundaryType);
+    }
 }

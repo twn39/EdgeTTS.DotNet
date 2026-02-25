@@ -55,9 +55,9 @@ public class Communicate
         {
             if (cancellationToken.IsCancellationRequested) break;
 
-            // Try to stream, with one retry on 403 (clock skew)
+            // Try to stream, with retries on 403 (clock skew / rate limit)
             ClientWebSocket? webSocket = null;
-            for (var attempt = 0; attempt < 2; attempt++)
+            for (var attempt = 0; attempt < 3; attempt++)
             {
                 webSocket?.Dispose();
                 webSocket = new ClientWebSocket();
@@ -83,9 +83,9 @@ public class Communicate
                     await webSocket.ConnectAsync(new Uri(wssUrl), cancellationToken);
                     break; // Connection successful
                 }
-                catch (System.Net.WebSockets.WebSocketException ex) when (attempt == 0 && ex.InnerException is HttpRequestException httpEx && httpEx.StatusCode == HttpStatusCode.Forbidden)
+                catch (System.Net.WebSockets.WebSocketException ex) when (attempt < 2 && Is403Error(ex))
                 {
-                    // 403 error - likely clock skew. Adjust and retry.
+                    // 403 error - likely clock skew or rate limit. Adjust and retry after delay.
                     try
                     {
                         Drm.HandleClientResponseError(new Dictionary<string, string>());
@@ -94,6 +94,7 @@ public class Communicate
                     {
                         // If we can't get the date from headers, still retry with regenerated GEC
                     }
+                    await Task.Delay(1000, cancellationToken);
                 }
             }
 
@@ -200,6 +201,19 @@ public class Communicate
                 await fileStream.WriteAsync(audioChunk.Data, cancellationToken);
             }
         }
+    }
+
+    private static bool Is403Error(System.Net.WebSockets.WebSocketException ex)
+    {
+        // Check if the inner exception is an HttpRequestException with 403
+        if (ex.InnerException is HttpRequestException httpEx && httpEx.StatusCode == HttpStatusCode.Forbidden)
+            return true;
+
+        // Fallback: check the message for '403' (some .NET versions wrap differently)
+        if (ex.Message.Contains("'403'") || ex.Message.Contains("403"))
+            return true;
+
+        return false;
     }
 
     private string CreateSsml(string text)

@@ -3,13 +3,12 @@ using System.Reflection;
 
 namespace EdgeTTS.DotNet.Tests;
 
+[Collection("WebSocket")]
 public class CommunicateTests
 {
     [Fact]
     public void RemoveIncompatibleCharacters_ShouldReplaceForbiddenChars()
     {
-        // Using reflection to test private static method or move it to a helper if needed.
-        // For now, let's assume we can test it if it was internal/public or use reflection.
         var type = typeof(Communicate);
         var method = type.GetMethod("RemoveIncompatibleCharacters", BindingFlags.NonPublic | BindingFlags.Static);
         
@@ -20,9 +19,39 @@ public class CommunicateTests
     }
 
     [Fact]
-    public async Task SaveAsync_ShouldSaveAudioFile()
+    public void RemoveIncompatibleCharacters_ShouldKeepNormalCharacters()
     {
-        var filename = "hello.mp3";
+        var type = typeof(Communicate);
+        var method = type.GetMethod("RemoveIncompatibleCharacters", BindingFlags.NonPublic | BindingFlags.Static);
+
+        var input = "Hello, World! 你好世界 123\n\ttab";
+        var result = (string?)method?.Invoke(null, new object[] { input });
+
+        Assert.Equal(input, result);
+    }
+
+    [Fact]
+    public void Constructor_ShouldAcceptDefaultVoice()
+    {
+        var communicate = new Communicate("Hello");
+        Assert.NotNull(communicate);
+    }
+
+    [Fact]
+    public void Constructor_ShouldAcceptCustomVoice()
+    {
+        var communicate = new Communicate("Test", voice: "zh-CN-XiaoxiaoNeural", rate: "+10%", pitch: "-5Hz");
+        Assert.NotNull(communicate);
+    }
+
+    [Fact]
+    [Trait("Category", "Integration")]
+    public async Task SaveAsync_ShouldSaveAudioFileToTempDir()
+    {
+        var tempDir = Path.Combine(Path.GetTempPath(), $"edgetts_test_{Guid.NewGuid():N}");
+        Directory.CreateDirectory(tempDir);
+        var filename = Path.Combine(tempDir, "hello.mp3");
+
         try
         {
             var request = new Communicate("Hello, world!", voice: "en-US-AriaNeural");
@@ -30,13 +59,13 @@ public class CommunicateTests
 
             Assert.True(File.Exists(filename));
             var fileInfo = new FileInfo(filename);
-            Assert.True(fileInfo.Length > 0);
+            Assert.True(fileInfo.Length > 0, "Audio file should not be empty");
         }
         finally
         {
-            if (File.Exists(filename))
+            if (Directory.Exists(tempDir))
             {
-                File.Delete(filename);
+                Directory.Delete(tempDir, recursive: true);
             }
         }
     }
