@@ -46,4 +46,8 @@ internal static class Constants
         { "Accept-Encoding", BaseHeaders["Accept-Encoding"] },
         { "Accept-Language", BaseHeaders["Accept-Language"] }
     };
+
+    // Audio timing constants for CBR-based offset compensation.
+    public const long TicksPerSecond = 10_000_000;
+    public const int Mp3BitrateBps = 48_000;
 }

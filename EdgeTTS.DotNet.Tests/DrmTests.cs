@@ -70,7 +70,7 @@ public class DrmTests
     {
         var headers = new Dictionary<string, string>
         {
-            { "Date", "Wed, 25 Feb 2026 08:00:00 GMT" }
+            { "Date", DateTime.UtcNow.ToString("R") }
         };
 
         // Should not throw — adjusts clock skew silently

@@ -49,10 +49,12 @@ public class Communicate
     public async IAsyncEnumerable<TTSChunk> StreamAsync([System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
         var offsetCompensation = TimeSpan.Zero;
+        long cumulativeAudioBytes = 0;
         var lastDurationOffset = TimeSpan.Zero;
 
         foreach (var part in _textParts)
         {
+            long chunkAudioBytes = 0;
             if (cancellationToken.IsCancellationRequested) break;
 
             // Try to stream, with retries on 403 (clock skew / rate limit)
@@ -85,14 +87,14 @@ public class Communicate
                 }
                 catch (System.Net.WebSockets.WebSocketException ex) when (attempt < 2 && Is403Error(ex))
                 {
-                    // 403 error - likely clock skew or rate limit. Adjust and retry after delay.
+                    // 403 error - likely clock skew or rate limit. Fetch voices to adjust clock skew and retry.
                     try
                     {
-                        Drm.HandleClientResponseError(new Dictionary<string, string>());
+                        await Voices.ListVoicesAsync(_proxy, cancellationToken);
                     }
-                    catch (SkewAdjustmentException)
+                    catch
                     {
-                        // If we can't get the date from headers, still retry with regenerated GEC
+                        // If it fails, still retry the websocket connection with regenerated GEC
                     }
                     await Task.Delay(1000, cancellationToken);
                 }
@@ -141,7 +143,11 @@ public class Communicate
                     }
                     else if (path == "turn.end")
                     {
-                        offsetCompensation = lastDurationOffset + TimeSpan.FromMilliseconds(875);
+                        cumulativeAudioBytes += chunkAudioBytes;
+                        long ticks = (cumulativeAudioBytes * 8 * Constants.TicksPerSecond) / Constants.Mp3BitrateBps;
+                        offsetCompensation = TimeSpan.FromTicks(ticks);
+                        chunkAudioBytes = 0;
+                        
                         yield return new TurnEndChunk();
                         break;
                     }
@@ -162,6 +168,7 @@ public class Communicate
                         }
 
                         audioWasReceivedInThisTurn = true;
+                        chunkAudioBytes += data.Length;
                         yield return new AudioChunk(data);
                     }
                     else if (path != "response" && path != "turn.start")
@@ -174,6 +181,7 @@ public class Communicate
                     if (headers.TryGetValue("Content-Type", out var contentType) && contentType.StartsWith("audio/mpeg", StringComparison.OrdinalIgnoreCase))
                     {
                         audioWasReceivedInThisTurn = true;
+                        chunkAudioBytes += data.Length;
                         yield return new AudioChunk(data);
                     }
                 }

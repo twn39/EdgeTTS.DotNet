@@ -1,10 +1,11 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
-        <TargetFramework>net10.0</TargetFramework>
+        <TargetFrameworks>net9.0;net10.0</TargetFrameworks>
+        <LangVersion>13.0</LangVersion>
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
-        <Version>0.2.0</Version>
+        <Version>0.3.0</Version>
         <Authors>Curry</Authors>
         <Description>A C# (.NET) library for Microsoft Edge's online Text-to-Speech service. Feature-complete migration of the Python edge-tts library.</Description>
         <PackageTags>edge;tts;text-to-speech;microsoft-edge;speech-synthesis</PackageTags>
