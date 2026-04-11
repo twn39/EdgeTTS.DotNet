@@ -1,0 +1,36 @@
+name: Publish to NuGet
+
+on:
+  push:
+    tags:
+      - 'v*' # 当推送类似 v0.4.0 的 tag 时触发
+
+jobs:
+  publish:
+    name: Build, Pack and Publish
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Setup .NET SDK
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: |
+          9.0.x
+          10.0.x
+
+    - name: Restore dependencies
+      run: dotnet restore EdgeTTS.DotNet/EdgeTTS.DotNet.csproj
+
+    - name: Build project
+      run: dotnet build EdgeTTS.DotNet/EdgeTTS.DotNet.csproj --configuration Release --no-restore
+
+    - name: Pack project
+      run: dotnet pack EdgeTTS.DotNet/EdgeTTS.DotNet.csproj --configuration Release --no-build --output ./nupkg
+
+    - name: Push to NuGet
+      run: dotnet nuget push ./nupkg/*.nupkg --api-key ${{ secrets.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json --skip-duplicate
